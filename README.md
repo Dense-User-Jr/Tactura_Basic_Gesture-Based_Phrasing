@@ -9,20 +9,15 @@ phrase aloud through the paired phone's TTS engine. Built for live demo.
 
 ```
 GestureComm/
-├── wear/          ← Wear OS app (sideloaded to Pixel Watch 2)
-│   └── src/main/kotlin/com/gesturecomm/
-│       ├── gestures/
-│       │   ├── GestureDefinitions.kt   ← phrases live here — easy to edit
-│       │   ├── GestureClassifier.kt    ← threshold logic, tunable constants
-│       │   └── GestureService.kt       ← foreground service, sensor loop
-│       ├── output/
-│       │   ├── PhoneMessenger.kt       ← sends phrase to phone
-│       │   └── WearMessageListenerService.kt
-│       └── ui/
-│           └── MainActivity.kt         ← Compose UI
-└── phone/         ← Phone companion app (install on paired phone)
+└── wear/          ← Wear OS app (sideloaded to Pixel Watch 2)
     └── src/main/kotlin/com/gesturecomm/
-        └── PhoneTtsListenerService.kt  ← receives phrase, speaks via TTS
+        ├── gestures/
+        │   ├── GestureDefinitions.kt   ← phrases live here — easy to edit
+        │   ├── GestureClassifier.kt    ← threshold logic, tunable constants
+        │   └── GestureService.kt       ← foreground service, sensor loop
+        │
+        └── ui/
+            └── MainActivity.kt         ← Compose UI
 ```
 
 ---
@@ -33,7 +28,6 @@ GestureComm/
 - Android Studio Hedgehog (2023.1.1) or newer
 - Pixel Watch 2 with Developer Mode enabled
 - Wear OS debugging enabled on the watch
-- Phone paired to the watch (normal setup)
 
 ### 1 — Enable Developer Mode on Pixel Watch 2
 1. Settings → System → About → tap **Build Number** 7 times
@@ -51,9 +45,6 @@ adb connect 192.168.1.42:5555          # use your watch's IP
 adb -s 192.168.1.42:5555 install wear/build/outputs/apk/debug/wear-debug.apk
 ```
 Or just press ▶ in Android Studio with the watch selected as target device.
-
-**Phone app:**
-Select your phone as the run target and run the `:phone` module.
 
 ### 3 — Grant permissions
 On the watch, when prompted: allow **Body Sensors** permission.
@@ -76,7 +67,7 @@ Flicks should be sharp snaps, not slow swings. Twists need ~90° of rotation.
 
 ---
 
-## Customising phrases (before the presentation)
+## Customising phrases
 
 Open `wear/src/main/kotlin/com/gesturecomm/gestures/GestureDefinitions.kt`
 and edit the `phrase` field for any gesture:
@@ -114,8 +105,8 @@ Typical adjustment range: ±3–5 units.
 ## Architecture overview
 
 ```
-Pixel Watch 2                           Paired Phone
-─────────────────────────────────       ──────────────────────
+Pixel Watch 2
+─────────────────────────────────
 SensorManager (50 Hz)
   │ accel + gyro events
   ▼
@@ -125,10 +116,7 @@ GestureClassifier
 GestureService (foreground)
   ├── Haptic pulse (watch)
   ├── Broadcast → MainActivity UI
-  └── Wearable MessageClient ──────────→ PhoneTtsListenerService
-                                              │
-                                              ▼
-                                         TextToSpeech.speak()
+  └── Wearable MessageClient ──────────→ Watch Speech
 ```
 
 No internet required. Entirely local. Works on airplane mode.
@@ -147,20 +135,18 @@ No internet required. Entirely local. Works on airplane mode.
 - Check the foreground notification is visible (means service is running)
 - Make gestures more deliberate — slower, larger motions work best during tuning
 
-**Phone not speaking**
-- Confirm the phone companion app is installed and running
-- Check the phone is connected to the watch (Wear OS app shows "Connected")
-- TTS engine: Settings → Accessibility → Text-to-Speech on the phone — ensure a TTS engine is installed
-
 **Wrong gestures firing**
 - Flick Up and Flick Down can sometimes overlap — increase threshold to 22f
 - Twist detection relies on gyro-Z; if the watch is worn on right wrist, CW/CCW may be inverted — swap the positive/negative threshold signs in `detectTwistCW` / `detectTwistCCW`
 
 ---
 
-## Extending after the presentation
+## Extending
 
 - **More phrases:** Add entries to the `Gesture` enum (currently capped at 6 gestures per the classifier design; extendable to ~12 with rule-based approach)
 - **Sequences:** See architecture notes in parent README — the sequence engine adds multi-gesture combos
 - **TFLite model:** Replace `GestureClassifier` with a TFLite `Interpreter` for higher accuracy and more gesture types
-- **Watch-only TTS:** Use `android.speech.tts.TextToSpeech` directly on the watch for offline-only demos (lower quality voice but no phone needed)
+
+
+
+---
